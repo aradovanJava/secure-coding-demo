@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ranjiva verzija - XSS Demo</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/" class="back-link">← Natrag na početnu</a>
+            <h1>⚠️ RANJIVA VERZIJA</h1>
+            <p class="subtitle danger">Ova verzija je namjerno NESIGURNA za demonstracijske svrhe!</p>
+        </header>
+
+        <!-- Poruka ako postoji -->
+        <div th:if="${message}" class="alert alert-info">
+            <span th:text="${message}"></span>
+        </div>
+
+        <div class="warning-box">
+            <h2>🚨 SIGURNOSNI PROBLEMI</h2>
+            <ol>
+                <li><strong>Nema validacije:</strong> Controller ne koristi <code>@Valid</code> anotaciju</li>
+                <li><strong>Nema sanitizacije:</strong> Korisnički unos se sprema direktno bez filtriranja</li>
+                <li><strong>Izvršava se JavaScript:</strong> Koristi <code>th:utext</code> umjesto <code>th:text</code></li>
+            </ol>
+        </div>
+
+        <div class="attack-demo">
+            <h2>🎯 POKUŠAJ NAPAD</h2>
+            <p>Kopiraj jedan od ovih payloada u formu ispod:</p>
+            <div class="payload-examples">
+                <div class="payload">
+                    <strong>Payload 1 - Alert Box:</strong>
+                    <code>&lt;script&gt;alert('XSS Napad uspješan!')&lt;/script&gt;</code>
+                </div>
+                <div class="payload">
+                    <strong>Payload 2 - Image onerror:</strong>
+                    <code>&lt;img src=x onerror="alert('Aplikacija je hakirana!')"&gt;</code>
+                </div>
+                <div class="payload">
+                    <strong>Payload 3 - Cookie Theft (simulacija):</strong>
+                    <code>&lt;script&gt;alert('Cookie: ' + document.cookie)&lt;/script&gt;</code>
+                </div>
+                <div class="payload">
+                    <strong>Payload 4 - DOM Manipulation:</strong>
+                    <code>&lt;img src=x onerror="document.body.style.backgroundColor='red'"&gt;</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- FORMA ZA UNOS KOMENTARA -->
+        <div class="form-container">
+            <h2>💬 Dodaj komentar</h2>
+            <form th:action="@{/vulnerable}" th:object="${comment}" method="post">
+                <div class="form-group">
+                    <label for="name">Ime:</label>
+                    <input type="text" id="name" th:field="*{name}" 
+                           placeholder="Unesite svoje ime">
+                </div>
+
+                <div class="form-group">
+                    <label for="content">Komentar:</label>
+                    <textarea id="content" th:field="*{content}" rows="4"
+                              placeholder="Unesite svoj komentar (ili maliciozni payload)"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-danger">Pošalji komentar</button>
+            </form>
+        </div>
+
+        <!-- PRIKAZ KOMENTARA -->
+        <div class="comments-section">
+            <h2>📝 Komentari (<span th:text="${comments.size()}">0</span>)</h2>
+            
+            <div class="alert alert-danger">
+                <strong>⚠️ OPREZ:</strong> Komentari ispod se prikazuju sa <code>th:utext</code> 
+                što znači da se HTML/JavaScript KOD IZVRŠAVA!
+            </div>
+
+            <div th:if="${comments.isEmpty()}" class="no-comments">
+                Još nema komentara. Pokušaj poslati maliciozni payload!
+            </div>
+
+            <div class="comment-card" th:each="comment : ${comments}">
+                <!-- ❌ OPASNO: th:utext IZVRŠAVA JavaScript! -->
+                <div class="comment-author">
+                    <strong>Autor:</strong> 
+                    <span th:utext="${comment.name}">Ime</span>
+                </div>
+                <div class="comment-content">
+                    <!-- ❌ OPASNO: Ovdje se izvršava maliciozni kod! -->
+                    <p th:utext="${comment.content}">Sadržaj komentara</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kod pregled -->
+        <div class="code-explanation">
+            <h2>📄 Ranjivi kod (Controller)</h2>
+            <pre><code>@PostMapping("/vulnerable")
+public String submitVulnerableComment(
+    @ModelAttribute Comment comment,  // ❌ BEZ @Valid
+    Model model) {
+    
+    // ❌ Direktno spremanje bez sanitizacije!
+    vulnerableComments.add(comment);
+    return "redirect:/vulnerable";
+}</code></pre>
+
+            <h2>📄 Ranjivi kod (Thymeleaf)</h2>
+            <pre><code>&lt;!-- ❌ th:utext izvršava JavaScript --&gt;
+&lt;p th:utext="${comment.content}"&gt;&lt;/p&gt;</code></pre>
+        </div>
+
+        <div class="actions">
+            <form th:action="@{/reset}" method="post" style="display: inline;">
+                <button type="submit" class="btn btn-secondary">🔄 Resetiraj komentare</button>
+            </form>
+            <a href="/secure" class="btn btn-success">✅ Vidi sigurnu verziju</a>
+        </div>
+    </div>
+</body>
+</html>

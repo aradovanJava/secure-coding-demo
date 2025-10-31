@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Coding Demo - XSS Zaštita</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ Secure Coding Demo</h1>
+            <p class="subtitle">Demonstracija XSS ranjivosti i zaštite u Spring Boot aplikaciji</p>
+        </header>
+
+        <div class="info-box">
+            <h2>📚 O ovoj aplikaciji</h2>
+            <p>Ova aplikacija demonstrira razliku između <strong>ranjive</strong> i <strong>sigurne</strong> 
+               implementacije validacije korisničkog unosa.</p>
+        </div>
+
+        <div class="cards-container">
+            <!-- RANJIVA VERZIJA -->
+            <div class="card vulnerable-card">
+                <div class="card-icon">⚠️</div>
+                <h2>Ranjiva verzija</h2>
+                <p>Nema validacije niti sanitizacije unosa. Omogućava XSS napade!</p>
+                <ul class="vulnerability-list">
+                    <li>❌ Bez @Valid anotacije</li>
+                    <li>❌ Bez sanitizacije HTML-a</li>
+                    <li>❌ th:utext izvršava JavaScript</li>
+                </ul>
+                <a href="/vulnerable" class="btn btn-danger">Testiranje ranjive verzije</a>
+                
+                <div class="attack-example">
+                    <h3>🎯 Primjer napada:</h3>
+                    <code>&lt;script&gt;alert('XSS')&lt;/script&gt;</code>
+                    <code>&lt;img src=x onerror="alert('Hakiran!')"&gt;</code>
+                </div>
+            </div>
+
+            <!-- SIGURNA VERZIJA -->
+            <div class="card secure-card">
+                <div class="card-icon">✅</div>
+                <h2>Sigurna verzija</h2>
+                <p>Koristi višeslojnu zaštitu protiv XSS napada.</p>
+                <ul class="security-list">
+                    <li>✅ @Valid validacija</li>
+                    <li>✅ OWASP HTML Sanitizer</li>
+                    <li>✅ th:text escaped output</li>
+                    <li>✅ Server-side provjere</li>
+                </ul>
+                <a href="/secure" class="btn btn-success">Testiranje sigurne verzije</a>
+            </div>
+        </div>
+
+        <div class="info-box tech-stack">
+            <h2>🔧 Tehnologije</h2>
+            <ul>
+                <li><strong>Backend:</strong> Spring Boot 3.2, Java 17</li>
+                <li><strong>Frontend:</strong> Thymeleaf Template Engine</li>
+                <li><strong>Validacija:</strong> Jakarta Bean Validation</li>
+                <li><strong>Sanitizacija:</strong> OWASP Java HTML Sanitizer</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p>Prezentacija o Secure Codingu - 2025</p>
+        </footer>
+    </div>
+</body>
+</html>

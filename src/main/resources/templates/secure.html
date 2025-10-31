@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sigurna verzija - XSS Zaštita</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/" class="back-link">← Natrag na početnu</a>
+            <h1>✅ SIGURNA VERZIJA</h1>
+            <p class="subtitle success">Ova verzija je zaštićena od XSS napada!</p>
+        </header>
+
+        <!-- Poruka ako postoji -->
+        <div th:if="${message}" class="alert alert-success">
+            <span th:text="${message}"></span>
+        </div>
+
+        <div th:if="${error}" class="alert alert-danger">
+            <span th:text="${error}"></span>
+        </div>
+
+        <div class="security-box">
+            <h2>🛡️ SIGURNOSNE ZAŠTITE</h2>
+            <ol>
+                <li><strong>@Valid validacija:</strong> Jakarta Bean Validation provjerava dužinu i format</li>
+                <li><strong>HTML Sanitizacija:</strong> OWASP HTML Sanitizer uklanja opasne tagove</li>
+                <li><strong>Escaped output:</strong> <code>th:text</code> automatski escapea HTML</li>
+                <li><strong>Dodatne provjere:</strong> Blokiranje javascript: protokola</li>
+            </ol>
+        </div>
+
+        <div class="defense-demo">
+            <h2>🧪 POKUŠAJ NAPAD (neće uspjeti!)</h2>
+            <p>Kopiraj iste payloade kao u ranjivoj verziji - vidjet ćeš da su blokirani:</p>
+            <div class="payload-examples">
+                <div class="payload">
+                    <strong>Payload 1:</strong>
+                    <code>&lt;script&gt;alert('XSS')&lt;/script&gt;</code>
+                    <span class="blocked">→ Blokiran!</span>
+                </div>
+                <div class="payload">
+                    <strong>Payload 2:</strong>
+                    <code>&lt;img src=x onerror="alert('XSS')"&gt;</code>
+                    <span class="blocked">→ Blokiran!</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- FORMA ZA UNOS KOMENTARA -->
+        <div class="form-container">
+            <h2>💬 Dodaj komentar</h2>
+            <form th:action="@{/secure}" th:object="${comment}" method="post">
+                <div class="form-group">
+                    <label for="name">Ime:</label>
+                    <input type="text" id="name" th:field="*{name}" 
+                           th:classappend="${#fields.hasErrors('name')} ? 'error' : ''"
+                           placeholder="Unesite svoje ime (2-50 znakova)">
+                    <span class="error-message" th:if="${#fields.hasErrors('name')}" 
+                          th:errors="*{name}">Greška</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="content">Komentar:</label>
+                    <textarea id="content" th:field="*{content}" rows="4"
+                              th:classappend="${#fields.hasErrors('content')} ? 'error' : ''"
+                              placeholder="Unesite svoj komentar (5-500 znakova)"></textarea>
+                    <span class="error-message" th:if="${#fields.hasErrors('content')}" 
+                          th:errors="*{content}">Greška</span>
+                </div>
+
+                <button type="submit" class="btn btn-success">Pošalji komentar</button>
+            </form>
+        </div>
+
+        <!-- PRIKAZ KOMENTARA -->
+        <div class="comments-section">
+            <h2>📝 Komentari (<span th:text="${comments.size()}">0</span>)</h2>
+            
+            <div class="alert alert-success">
+                <strong>✅ SIGURNO:</strong> Komentari ispod se prikazuju sa <code>th:text</code> 
+                što znači da HTML/JavaScript kod NIJE izvršen, već je prikazan kao tekst!
+            </div>
+
+            <div th:if="${comments.isEmpty()}" class="no-comments">
+                Još nema komentara. Dodaj prvi komentar!
+            </div>
+
+            <div class="comment-card" th:each="comment : ${comments}">
+                <!-- ✅ SIGURNO: th:text escapea HTML -->
+                <div class="comment-author">
+                    <strong>Autor:</strong> 
+                    <span th:text="${comment.name}">Ime</span>
+                </div>
+                <div class="comment-content">
+                    <!-- ✅ SIGURNO: Maliciozni kod se prikazuje kao tekst -->
+                    <p th:text="${comment.content}">Sadržaj komentara</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kod pregled -->
+        <div class="code-explanation">
+            <h2>📄 Siguran kod (Model)</h2>
+            <pre><code>@Data
+public class Comment {
+    @NotBlank(message = "Ime ne smije biti prazno")
+    @Size(min = 2, max = 50)
+    private String name;
+    
+    @NotBlank(message = "Komentar ne smije biti prazan")
+    @Size(min = 5, max = 500)
+    private String content;
+}</code></pre>
+
+            <h2>📄 Siguran kod (Controller)</h2>
+            <pre><code>@PostMapping("/secure")
+public String submitSecureComment(
+    @Valid @ModelAttribute Comment comment,  // ✅ SA @Valid
+    BindingResult bindingResult) {
+    
+    // ✅ Provjera validacijskih grešaka
+    if (bindingResult.hasErrors()) {
+        return "secure";
+    }
+    
+    // ✅ HTML sanitizacija
+    String safeName = htmlSanitizer.sanitize(comment.getName());
+    String safeContent = htmlSanitizer.sanitize(comment.getContent());
+    
+    // ✅ Dodatna provjera za JavaScript protokole
+    if (containsJavaScriptProtocol(safeName) || 
+        containsJavaScriptProtocol(safeContent)) {
+        model.addAttribute("error", "Nije dozvoljen JavaScript!");
+        return "secure";
+    }
+    
+    secureComments.add(new Comment(safeName, safeContent));
+    return "redirect:/secure";
+}</code></pre>
+
+            <h2>📄 Siguran kod (Thymeleaf)</h2>
+            <pre><code>&lt;!-- ✅ th:text automatski escapea HTML --&gt;
+&lt;p th:text="${comment.content}"&gt;&lt;/p&gt;
+
+&lt;!-- Rezultat: &lt;script&gt; se prikazuje kao tekst, 
+     ne izvršava se kao kod! --&gt;</code></pre>
+
+            <h2>📄 HTML Sanitizer konfiguracija</h2>
+            <pre><code>@Bean
+public PolicyFactory htmlSanitizer() {
+    return new HtmlPolicyBuilder()
+        .allowElements("p", "br", "strong", "em")
+        .allowElements("ul", "ol", "li")
+        .allowElements("a")
+        .allowAttributes("href").onElements("a")
+        .allowStandardUrlProtocols()
+        .toFactory();  // Sve ostalo je blokirano!
+}</code></pre>
+        </div>
+
+        <div class="security-layers">
+            <h2>🔒 Višeslojna zaštita</h2>
+            <div class="layer">
+                <strong>Sloj 1 - Input Validation:</strong> @Valid + Bean Validation constraints
+            </div>
+            <div class="layer">
+                <strong>Sloj 2 - Sanitizacija:</strong> OWASP HTML Sanitizer (whitelist pristup)
+            </div>
+            <div class="layer">
+                <strong>Sloj 3 - Output Escaping:</strong> Thymeleaf th:text automatski escapea
+            </div>
+            <div class="layer">
+                <strong>Sloj 4 - Dodatne provjere:</strong> Custom validacija za javascript: protokole
+            </div>
+        </div>
+
+        <div class="actions">
+            <form th:action="@{/reset}" method="post" style="display: inline;">
+                <button type="submit" class="btn btn-secondary">🔄 Resetiraj komentare</button>
+            </form>
+            <a href="/vulnerable" class="btn btn-danger">⚠️ Vidi ranjive verziju</a>
+        </div>
+    </div>
+</body>
+</html>
